@@ -1,0 +1,55 @@
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://obniz.io/js/jquery-3.2.1.min.js"></script>
+  <script src="https://unpkg.com/obniz@1.9.5/obniz.js"></script>
+</head>
+<body>
+
+<div id="obniz-debug"></div>
+<h1>ACCEL</h1>
+
+<script>
+  var accel_x;
+  var accel_y;
+  var accel_z;
+  
+  var obniz = new Obniz("XXXX-XXXX");
+  
+  obniz.onconnect = async function () {
+    obniz.i2c0.start({mode:"master", sda:0, scl:1, clock:100000}); 　        // I2C スタート
+    obniz.i2c0.write(0x19, [0x20, 0x97]);                                    // CTRL_REG1_A ODR[3:0]:1001
+    obniz.i2c0.write(0x19, [0x23, 0x08]);                                    // CTRL_REG4_A HR 1
+    while(true) {
+　    await obniz.wait(1000);                                                // 1秒待ち
+      obniz.i2c0.write(0x19, [0xA8]);                                        // OUT_X_L_A 加速度取得
+      
+      var ret = await obniz.i2c0.readWait(0x19, 6);                          // 加速度を読み込む
+      
+      accel_x = getAccel((((ret[1] << 8 ) | ret[0]) >> 4)).toString(10);     // X軸
+      accel_y = getAccel((((ret[3] << 8 ) | ret[2]) >> 4)).toString(10);     // Y軸
+      accel_z = getAccel((((ret[5] << 8 ) | ret[4]) >> 4)).toString(10);     // Z軸
+      
+      // ディスプレイに表示
+      obniz.display.clear();
+      obniz.display.pos(0,0);
+      obniz.display.print("X:"+accel_x + " mg");
+      obniz.display.pos(0,12);
+      obniz.display.print("Y:"+accel_y + " mg");
+      obniz.display.pos(0,24);
+      obniz.display.print("Z:"+accel_z + " mg");
+    }
+  }
+  
+  function getAccel( src ){
+    
+    // unsigned Word → short
+    if( src <= 2048 ){
+      return src;
+    } else {
+      return src - 4096;
+    }
+}
+</script>
+</body>
+</html>
